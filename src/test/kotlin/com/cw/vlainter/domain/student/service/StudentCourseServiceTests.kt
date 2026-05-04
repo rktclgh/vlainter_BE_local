@@ -62,6 +62,15 @@ class StudentCourseServiceTests {
     @org.mockito.Mock private lateinit var selfProvider: ObjectProvider<StudentCourseService>
 
     @Test
+    fun `collectSummarySources는 선택 자료가 없으면 embedding 호출 없이 빈 목록을 반환한다`() {
+        val result = invokeCollectSummarySources(service(), 1L, createCourse(), emptyList())
+
+        assertThat(result).isEmpty()
+        then(embeddingProviderRouter).shouldHaveNoInteractions()
+        then(docChunkEmbeddingRepository).shouldHaveNoInteractions()
+    }
+
+    @Test
     fun `collectSummarySources는 semantic chunk가 unusable이면 전체 chunk fallback을 사용한다`() {
         val course = createCourse()
         val material = createMaterial(course)
@@ -103,6 +112,38 @@ class StudentCourseServiceTests {
 
         assertThat(result).isNotEmpty()
         then(docChunkEmbeddingRepository).should().findAllByUserIdAndUserFileIdOrderByChunkNoAsc(1L, material.userFile.id)
+    }
+
+    @Test
+    fun `시험 생성 snippet은 연속되지 않은 chunkNo를 하나의 문서 구간으로 병합하지 않는다`() {
+        val result = invokeBuildExamGenerationSnippets(
+            service(),
+            listOf(
+                chunkEntity(200L, 3, longChunkText("운영체제 프로세스")),
+                chunkEntity(200L, 4, longChunkText("운영체제 스레드")),
+                chunkEntity(200L, 40, longChunkText("데이터베이스 인덱스"))
+            )
+        )
+
+        assertThat(result).anyMatch { it.startsWith("[문서 구간 3-4]") }
+        assertThat(result).anyMatch { it.startsWith("[문서 구간 40-40]") }
+        assertThat(result).noneMatch { it.startsWith("[문서 구간 3-40]") }
+    }
+
+    @Test
+    fun `요약 snippet은 연속되지 않은 chunkNo를 하나의 문서 구간으로 병합하지 않는다`() {
+        val result = invokeBuildSummarySnippets(
+            service(),
+            listOf(
+                chunkEntity(200L, 5, longChunkText("네트워크 계층")),
+                chunkEntity(200L, 6, longChunkText("전송 계층")),
+                chunkEntity(200L, 42, longChunkText("보안 인증"))
+            )
+        )
+
+        assertThat(result).anyMatch { it.startsWith("[문서 구간 5-6]") }
+        assertThat(result).anyMatch { it.startsWith("[문서 구간 42-42]") }
+        assertThat(result).noneMatch { it.startsWith("[문서 구간 5-42]") }
     }
 
     @Test
@@ -163,6 +204,32 @@ class StudentCourseServiceTests {
         )
         method.isAccessible = true
         return method.invoke(service, userId, course, materials) as List<CourseMaterialSummarySource>
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun invokeBuildExamGenerationSnippets(
+        service: StudentCourseService,
+        chunks: List<DocChunkEmbedding>
+    ): List<String> {
+        val method = StudentCourseService::class.java.getDeclaredMethod(
+            "buildExamGenerationSnippets",
+            List::class.java
+        )
+        method.isAccessible = true
+        return method.invoke(service, chunks) as List<String>
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun invokeBuildSummarySnippets(
+        service: StudentCourseService,
+        chunks: List<DocChunkEmbedding>
+    ): List<String> {
+        val method = StudentCourseService::class.java.getDeclaredMethod(
+            "buildSummarySnippets",
+            List::class.java
+        )
+        method.isAccessible = true
+        return method.invoke(service, chunks) as List<String>
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -249,6 +316,9 @@ class StudentCourseServiceTests {
             override val chunkNo: Int = chunkNo
             override val chunkText: String = chunkText
         }
+
+    private fun longChunkText(topic: String): String =
+        "$topic 개념을 강의자료 문맥 안에서 충분히 길게 설명합니다. 핵심 정의, 적용 사례, 비교 기준, 시험 대비 포인트를 포함해 snippet 생성 기준을 안정적으로 통과하도록 구성한 문장입니다."
 
     private fun chunkEntity(userFileId: Long, chunkNo: Int, chunkText: String) = DocChunkEmbedding(
         id = chunkNo.toLong(),

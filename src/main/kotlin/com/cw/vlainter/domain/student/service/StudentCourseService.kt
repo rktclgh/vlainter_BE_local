@@ -727,6 +727,9 @@ class StudentCourseService(
             materialsById[materialId]
                 ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "선택한 강의자료를 찾을 수 없습니다.")
         }
+        if (selectedMaterials.isEmpty()) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "요약본 생성에 사용할 강의자료 발췌가 부족합니다. 자료를 다시 분석해 주세요.")
+        }
         if (selectedMaterials.any { resolveMaterialKind(it) != StudentCourseMaterialKind.LECTURE_MATERIAL }) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "요약본은 강의자료만 선택할 수 있습니다.")
         }
@@ -1671,13 +1674,7 @@ class StudentCourseService(
         }
         if (normalizedChunks.isEmpty()) return emptyList()
 
-        val mergedSegments = normalizedChunks.chunked(2).map { group ->
-            val firstChunkNo = group.first().first
-            val lastChunkNo = group.last().first
-            val mergedText = group.joinToString("\n") { it.second }
-                .let { if (it.length <= 900) it else it.take(900).trimEnd() + "..." }
-            "[문서 구간 ${firstChunkNo}-${lastChunkNo}] $mergedText"
-        }
+        val mergedSegments = mergeContiguousChunkSegments(normalizedChunks, maxLength = 900)
 
         return sampleEvenly(mergedSegments.distinct(), EXAM_SNIPPET_SAMPLE_SIZE)
     }
@@ -1687,6 +1684,8 @@ class StudentCourseService(
         course: StudentCourse,
         materials: List<StudentCourseMaterial>
     ): List<CourseMaterialSummarySource> {
+        if (materials.isEmpty()) return emptyList()
+
         val queries = buildSummaryRetrievalQueries(course)
         val queryEmbeddings = buildQueryEmbeddings(queries, RetrievalPurpose.SUMMARY)
         var loadedChunkCount = 0
@@ -1752,15 +1751,32 @@ class StudentCourseService(
         }
         if (normalizedChunks.isEmpty()) return emptyList()
 
-        val mergedSegments = normalizedChunks.chunked(2).map { group ->
+        val mergedSegments = mergeContiguousChunkSegments(normalizedChunks, maxLength = 1100)
+
+        return sampleEvenly(mergedSegments.distinct())
+    }
+
+    private fun mergeContiguousChunkSegments(
+        normalizedChunks: List<Pair<Int, String>>,
+        maxLength: Int
+    ): List<String> {
+        val groups = mutableListOf<MutableList<Pair<Int, String>>>()
+        normalizedChunks.forEach { chunk ->
+            val currentGroup = groups.lastOrNull()
+            if (currentGroup == null || chunk.first != currentGroup.last().first + 1) {
+                groups += mutableListOf(chunk)
+            } else {
+                currentGroup += chunk
+            }
+        }
+
+        return groups.map { group ->
             val firstChunkNo = group.first().first
             val lastChunkNo = group.last().first
             val mergedText = group.joinToString("\n") { it.second }
-                .let { if (it.length <= 1100) it else it.take(1100).trimEnd() + "..." }
+                .let { if (it.length <= maxLength) it else it.take(maxLength).trimEnd() + "..." }
             "[문서 구간 ${firstChunkNo}-${lastChunkNo}] $mergedText"
         }
-
-        return sampleEvenly(mergedSegments.distinct())
     }
 
     private fun normalizeChunkText(text: String): String =
