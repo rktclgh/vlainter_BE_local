@@ -100,6 +100,64 @@ class UserFileServiceTests {
         )
     }
 
+    @Test
+    fun `강의자료 삭제 fallback 시 userFile 기준 visual asset S3 오브젝트를 함께 정리한다`() {
+        val owner = createUser()
+        val targetFile = createUserFile(id = 10L, user = owner, storageKey = "uploads/course-material/original.pdf")
+        val course = createCourse(owner.id)
+        val materialFile = createUserFile(id = 11L, user = owner, storageKey = "uploads/course-material/material.pdf")
+        val material = StudentCourseMaterial(
+            id = 20L,
+            course = course,
+            userFile = materialFile
+        )
+        val visualAssets = listOf(
+            StudentCourseMaterialVisualAsset(
+                id = 30L,
+                material = material,
+                userFile = targetFile,
+                assetType = StudentCourseMaterialVisualAssetType.PDF_PAGE_RENDER,
+                assetOrder = 1,
+                label = "page-1",
+                storageKey = "uploads/course-material/asset-1.png"
+            ),
+            StudentCourseMaterialVisualAsset(
+                id = 31L,
+                material = material,
+                userFile = targetFile,
+                assetType = StudentCourseMaterialVisualAssetType.PDF_PAGE_RENDER,
+                assetOrder = 2,
+                label = "page-2",
+                storageKey = "uploads/course-material/asset-2.png"
+            )
+        )
+
+        given(userRepository.findById(owner.id)).willReturn(Optional.of(owner))
+        given(userFileRepository.findById(targetFile.id)).willReturn(Optional.of(targetFile))
+        given(studentCourseMaterialRepository.findByUserFile_Id(targetFile.id)).willReturn(null)
+        given(studentCourseMaterialVisualAssetRepository.findAllByUserFile_IdOrderByAssetOrderAsc(targetFile.id))
+            .willReturn(visualAssets)
+
+        service().deleteOwnedFile(owner.id, targetFile.id)
+
+        then(docChunkEmbeddingRepository).should().deleteAllByUserIdAndUserFileId(owner.id, targetFile.id)
+        then(documentIngestionJobRepository).should().deleteAllByUserIdAndDocumentFileId(owner.id, targetFile.id)
+        then(studentCourseMaterialVisualAssetRepository).should()
+            .findAllByUserFile_IdOrderByAssetOrderAsc(targetFile.id)
+        then(studentCourseMaterialVisualAssetRepository).should().deleteAllByUserFileId(targetFile.id)
+        then(studentCourseMaterialRepository).should().deleteAllByUserFileId(targetFile.id)
+        then(userFileRepository).should().delete(targetFile)
+
+        val requestCaptor = ArgumentCaptor.forClass(DeleteObjectRequest::class.java)
+        then(s3Client).should(org.mockito.Mockito.times(3)).deleteObject(requestCaptor.capture())
+        val deletedKeys = requestCaptor.allValues.map { it.key() }
+        assertThat(deletedKeys).containsExactlyInAnyOrder(
+            "uploads/course-material/original.pdf",
+            "uploads/course-material/asset-1.png",
+            "uploads/course-material/asset-2.png"
+        )
+    }
+
     private fun service() = UserFileService(
         userRepository = userRepository,
         userFileRepository = userFileRepository,

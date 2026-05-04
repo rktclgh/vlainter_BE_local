@@ -286,6 +286,11 @@ class UserFileService(
                     studentCourseMaterialVisualAssetRepository.deleteAllByMaterialId(linkedMaterial.id)
                 }
             } else {
+                val visualAssets = studentCourseMaterialVisualAssetRepository
+                    .findAllByUserFile_IdOrderByAssetOrderAsc(target.id)
+                additionalDeletionKeys += visualAssets
+                    .mapNotNull { resolveDeletionKey(it.storageKey, null) }
+                    .filter { it.isNotBlank() }
                 studentCourseMaterialVisualAssetRepository.deleteAllByUserFileId(target.id)
             }
             studentCourseMaterialRepository.deleteAllByUserFileId(target.id)

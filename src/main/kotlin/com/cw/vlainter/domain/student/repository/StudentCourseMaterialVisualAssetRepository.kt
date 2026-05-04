@@ -9,6 +9,8 @@ import org.springframework.data.repository.query.Param
 interface StudentCourseMaterialVisualAssetRepository : JpaRepository<StudentCourseMaterialVisualAsset, Long> {
     fun findAllByMaterial_IdOrderByAssetOrderAsc(materialId: Long): List<StudentCourseMaterialVisualAsset>
 
+    fun findAllByUserFile_IdOrderByAssetOrderAsc(userFileId: Long): List<StudentCourseMaterialVisualAsset>
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("delete from StudentCourseMaterialVisualAsset asset where asset.material.id = :materialId")
     fun deleteAllByMaterialId(@Param("materialId") materialId: Long): Int
