@@ -69,12 +69,12 @@ class OriginValidationFilter(
     }
 
     private fun extractRequestOrigin(request: HttpServletRequest): String? {
-        val origin = request.getHeader("Origin")
-            ?.trim()
-            ?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
-            ?.let(::normalizeOrigin)
-        if (origin != null) {
-            return origin
+        val originHeader = request.getHeader("Origin")
+        if (originHeader != null) {
+            return originHeader
+                .trim()
+                .takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+                ?.let(::normalizeOrigin)
         }
 
         val referer = request.getHeader("Referer")

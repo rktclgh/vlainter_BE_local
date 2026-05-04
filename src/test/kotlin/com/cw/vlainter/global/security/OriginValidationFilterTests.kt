@@ -113,6 +113,22 @@ class OriginValidationFilterTests {
     }
 
     @Test
+    fun `invalid origin with valid referer is blocked`() {
+        val filter = filter()
+        val request = MockHttpServletRequest("POST", "/api/auth/logout").apply {
+            addHeader("Origin", "null")
+            addHeader("Referer", "http://localhost:5173/content/mypage")
+            remoteAddr = "127.0.0.1"
+            setCookies(Cookie("vlainter_rt", "refresh-token"))
+        }
+        val response = MockHttpServletResponse()
+
+        filter.doFilter(request, response, MockFilterChain())
+
+        assertEquals(403, response.status)
+    }
+
+    @Test
     fun `safe methods are not protected even with auth cookie`() {
         val filter = filter()
 
@@ -169,7 +185,6 @@ class OriginValidationFilterTests {
     fun `host headers alone do not grant same-origin access`() {
         val filter = filter()
         val request = MockHttpServletRequest("POST", "/api/users/me/service-mode").apply {
-            addHeader("Origin", "https://vlainter.online")
             addHeader("Host", "internal-backend.local:8080")
             addHeader("X-Forwarded-Host", "vlainter.online")
             remoteAddr = "127.0.0.1"
@@ -179,7 +194,7 @@ class OriginValidationFilterTests {
 
         filter.doFilter(request, response, MockFilterChain())
 
-        assertEquals(200, response.status)
+        assertEquals(403, response.status)
     }
 
     @Test
