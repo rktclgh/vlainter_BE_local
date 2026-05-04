@@ -1828,11 +1828,11 @@ class StudentCourseService(
                 }
             }
             if (collected.size >= maxDistinct) {
-                return collected.take(maxDistinct)
+                return collected.take(maxDistinct).sortedBy { it.chunkNo }
             }
         }
 
-        return collected.take(maxDistinct)
+        return collected.take(maxDistinct).sortedBy { it.chunkNo }
     }
 
     private fun buildQueryEmbeddings(

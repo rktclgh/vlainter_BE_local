@@ -462,12 +462,12 @@ class InterviewPracticeService(
     fun getSessionResults(principal: AuthPrincipal, sessionId: Long): InterviewSessionResultsResponse {
         val session = interviewSessionRepository.findByIdAndUser_Id(sessionId, principal.userId)
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "면접 세션을 찾을 수 없습니다.")
-        val evaluationsByTurnId = interviewTurnEvaluationRepository
-            .findAllByTurn_Session_Id(session.id)
-            .associateBy { it.turn.id }
 
         lateinit var response: InterviewSessionResultsResponse
         val elapsedMs = measureTimeMillis {
+            val evaluationsByTurnId = interviewTurnEvaluationRepository
+                .findAllByTurn_Session_Id(session.id)
+                .associateBy { it.turn.id }
             val turns = interviewTurnRepository.findAllDetailedBySessionIdOrderByTurnNoAsc(session.id)
                 .map { turn ->
                     val evaluation = evaluationsByTurnId[turn.id]

@@ -1099,7 +1099,7 @@ class InterviewAiOrchestrator(
               "questions": [
                 {
                   "questionText": "면접 질문",
-                  "questionType": "RESUME_EXPERIENCE | RESUME_RESULT | RESUME_MOTIVATION | RESUME_VALUE | PORTFOLIO_PROJECT | PORTFOLIO_RESULT | INTRODUCE_MOTIVATION | INTRODUCE_VALUE | INTRODUCE_FUTURE_PLAN | INTRODUCE_EXPERIENCE",
+                  "questionType": "RESUME_EXPERIENCE | RESUME_RESULT | RESUME_MOTIVATION | RESUME_VALUE | PORTFOLIO_PROJECT | PORTFOLIO_RESULT | PORTFOLIO_DECISION | INTRODUCE_MOTIVATION | INTRODUCE_VALUE | INTRODUCE_FUTURE_PLAN | INTRODUCE_EXPERIENCE",
                   "evidenceKind": "ACTUAL_EXPERIENCE | PROJECT_OR_RESULT | MOTIVATION_OR_ASPIRATION | VALUE_OR_ATTITUDE",
                   "referenceAnswer": "경험/성과형 질문이면 STAR형 예시 답변, 동기/가치관형 질문이면 동기와 실행 계획이 드러나는 예시 답변",
                   "evidence": ["질문의 근거가 된 문서 포인트", "..."]

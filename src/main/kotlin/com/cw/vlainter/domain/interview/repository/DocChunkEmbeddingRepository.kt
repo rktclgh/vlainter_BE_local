@@ -14,8 +14,8 @@ interface DocChunkEmbeddingRepository : JpaRepository<DocChunkEmbedding, Long> {
     @Query(
         value = """
             select
-                d.chunk_no as chunkNo,
-                d.chunk_text as chunkText
+                d.chunk_no as "chunkNo",
+                d.chunk_text as "chunkText"
             from doc_chunk_embeddings d
             where d.user_id = :userId
               and d.user_file_id = :userFileId
