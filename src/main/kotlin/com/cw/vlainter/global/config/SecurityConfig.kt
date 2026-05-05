@@ -59,6 +59,10 @@ class SecurityConfig(
             .httpBasic { it.disable() }
             .formLogin { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .headers {
+                it.cacheControl { cacheControl -> cacheControl.disable() }
+                it.addHeaderWriter(StaticAssetCacheHeaderWriter())
+            }
             .exceptionHandling {
                 it.authenticationEntryPoint(restAuthenticationEntryPoint)
                 it.accessDeniedHandler(restAccessDeniedHandler)
