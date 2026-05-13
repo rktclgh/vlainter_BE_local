@@ -73,7 +73,7 @@ App containers should connect to host services through Docker's host gateway:
 SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/vlainter
 SPRING_DATASOURCE_USERNAME=vlainter
 SPRING_DATASOURCE_PASSWORD=<same as POSTGRES_PASSWORD>
-UPSTASH_REDIS_URL=redis://:<same as REDIS_PASSWORD>@host.docker.internal:6379
+REDIS_URL=redis://:<same as REDIS_PASSWORD>@host.docker.internal:6379
 ```
 
 ## First Run
@@ -100,7 +100,7 @@ When the app container is added later, use the host gateway for shared PostgreSQ
 SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/vlainter
 SPRING_DATASOURCE_USERNAME=vlainter
 SPRING_DATASOURCE_PASSWORD=<same as POSTGRES_PASSWORD>
-UPSTASH_REDIS_URL=redis://:<same as REDIS_PASSWORD>@host.docker.internal:6379
+REDIS_URL=redis://:<same as REDIS_PASSWORD>@host.docker.internal:6379
 AWS_S3_BUCKET=vlainter-local
 AWS_REGION=ap-northeast-2
 AWS_S3_ENDPOINT=http://minio:9000
