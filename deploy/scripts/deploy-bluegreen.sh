@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-DEPLOY_DIR="${DEPLOY_DIR:-/home/ubuntu/vlainter}"
+DEPLOY_DIR="${DEPLOY_DIR:-/home/song/Desktop/vlainter}"
 IMAGE_TAG="${IMAGE_TAG:?IMAGE_TAG is required}"
 DOCKERHUB_USERNAME="${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME is required}"
 DOCKERHUB_TOKEN="${DOCKERHUB_TOKEN:?DOCKERHUB_TOKEN is required}"
