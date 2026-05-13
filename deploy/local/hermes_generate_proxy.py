@@ -40,11 +40,33 @@ def _json_response(handler: BaseHTTPRequestHandler, status: int, payload: dict[s
 
 
 def _read_json(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
-    length = int(handler.headers.get("Content-Length", "0") or "0")
-    raw = handler.rfile.read(length)
+    raw = _read_body(handler)
     if not raw:
         return {}
     return json.loads(raw.decode("utf-8"))
+
+
+def _read_body(handler: BaseHTTPRequestHandler) -> bytes:
+    length_header = handler.headers.get("Content-Length")
+    if length_header:
+        return handler.rfile.read(int(length_header))
+
+    transfer_encoding = handler.headers.get("Transfer-Encoding", "")
+    if "chunked" not in transfer_encoding.lower():
+        return b""
+
+    chunks = []
+    while True:
+        size_line = handler.rfile.readline().split(b";", 1)[0].strip()
+        if not size_line:
+            continue
+        size = int(size_line, 16)
+        if size == 0:
+            handler.rfile.readline()
+            break
+        chunks.append(handler.rfile.read(size))
+        handler.rfile.read(2)
+    return b"".join(chunks)
 
 
 def _require_auth(handler: BaseHTTPRequestHandler) -> bool:
