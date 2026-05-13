@@ -118,38 +118,25 @@ jobs:
       - name: Checkout BE (this repo)
         uses: actions/checkout@v4
 
-      - name: Verify local deployment secrets
+      - name: Verify local runner environment
         run: |
-          [ -n "${{ secrets.LOCAL_SERVER_HOST }}" ] || (echo "Missing LOCAL_SERVER_HOST" && exit 1)
-          [ -n "${{ secrets.LOCAL_SERVER_SSH_KEY }}" ] || (echo "Missing LOCAL_SERVER_SSH_KEY" && exit 1)
-          case "${{ secrets.LOCAL_SERVER_HOST }}" in
-            192.168.123.103|song-server|song-server.local|127.0.0.1|localhost)
-              ;;
-            *)
-              echo "LOCAL_SERVER_HOST is not allowlisted for local Ubuntu deployment"
-              exit 1
-              ;;
-          esac
+          [ "$(uname -s)" = "Linux" ] || (echo "Deploy runner must be Linux" && exit 1)
+          command -v docker >/dev/null || (echo "Docker is required on the self-hosted runner" && exit 1)
+          docker compose version >/dev/null || (echo "Docker Compose plugin is required on the self-hosted runner" && exit 1)
+          [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] || (echo "Missing DOCKERHUB_USERNAME" && exit 1)
+          [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ] || (echo "Missing DOCKERHUB_TOKEN" && exit 1)
 
-      - name: Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.LOCAL_SERVER_SSH_KEY }}
+      - name: Sync deploy assets locally
+        run: |
+          mkdir -p "${DEPLOY_DIR}/deploy"
+          cp -a deploy/. "${DEPLOY_DIR}/deploy/"
 
-      - name: Add local server to known_hosts
-        run: ssh-keyscan -H ${{ secrets.LOCAL_SERVER_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Upload deploy assets
+      - name: Deploy through local Docker
         env:
-          LOCAL_SERVER_USER: ${{ secrets.LOCAL_SERVER_USER }}
-          LOCAL_SERVER_HOST: ${{ secrets.LOCAL_SERVER_HOST }}
+          IMAGE_TAG: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          ssh ${LOCAL_SERVER_USER:-song}@${LOCAL_SERVER_HOST} "mkdir -p '${DEPLOY_DIR}/deploy'"
-          scp -r deploy/* ${LOCAL_SERVER_USER:-song}@${LOCAL_SERVER_HOST}:${DEPLOY_DIR}/deploy/
-          ssh ${LOCAL_SERVER_USER:-song}@${LOCAL_SERVER_HOST} "cat > /tmp/vlainter-deploy-local.sh" <<'REMOTE_SCRIPT'
-          set -euo pipefail
-          DOCKERHUB_TOKEN="$(cat)"
-
           mkdir -p "$DEPLOY_DIR"
           cd "$DEPLOY_DIR"
 
@@ -159,7 +146,11 @@ jobs:
           fi
 
           chmod +x deploy/scripts/deploy-bluegreen.sh
-          DEPLOY_DIR="$DEPLOY_DIR" IMAGE_TAG="$IMAGE_TAG" DOCKERHUB_USERNAME="$DOCKERHUB_USERNAME" DOCKERHUB_TOKEN="$DOCKERHUB_TOKEN" ./deploy/scripts/deploy-bluegreen.sh
+          DEPLOY_DIR="$DEPLOY_DIR" \
+          IMAGE_TAG="$IMAGE_TAG" \
+          DOCKERHUB_USERNAME="$DOCKERHUB_USERNAME" \
+          DOCKERHUB_TOKEN="$DOCKERHUB_TOKEN" \
+            ./deploy/scripts/deploy-bluegreen.sh
 
           running_apps="$(docker ps --format '{{.Names}}' | grep -c '^vlainter-app-' || true)"
           running_apps="$(printf '%s' "$running_apps" | tr -d ' ')"
@@ -168,15 +159,3 @@ jobs:
             docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
             exit 1
           fi
-          REMOTE_SCRIPT
-
-      - name: Deploy to local Ubuntu server
-        env:
-          LOCAL_SERVER_USER: ${{ secrets.LOCAL_SERVER_USER }}
-          LOCAL_SERVER_HOST: ${{ secrets.LOCAL_SERVER_HOST }}
-          IMAGE_TAG: ${{ env.IMAGE_NAME }}:${{ github.sha }}
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        run: |
-          printf '%s' "$DOCKERHUB_TOKEN" | ssh ${LOCAL_SERVER_USER:-song}@${LOCAL_SERVER_HOST} \
-            "DEPLOY_DIR='${DEPLOY_DIR}' IMAGE_TAG='${IMAGE_TAG}' DOCKERHUB_USERNAME='${DOCKERHUB_USERNAME}' bash /tmp/vlainter-deploy-local.sh"

@@ -37,6 +37,10 @@ self-hosted, linux, local-ubuntu
 
 This is required because the server currently lives on the private LAN. A GitHub-hosted runner cannot reach `192.168.123.103` unless a VPN, tunnel, or public SSH route is added later.
 
+The self-hosted runner is only the deployment executor. Build work stays on GitHub-hosted runners, which build and push the Docker image. The server runner only copies deploy assets into `/home/song/Desktop/vlainter/deploy`, pulls the pushed image, switches blue/green containers, and runs health checks through local Docker.
+
+Do not expose SSH only for CI/CD. The runner connects outbound to GitHub and receives jobs from there.
+
 ## First Run
 
 From `/home/song/Desktop/vlainter/deploy/local`:
