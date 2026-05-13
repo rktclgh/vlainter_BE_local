@@ -104,9 +104,10 @@ UPSTASH_REDIS_URL=redis://:<same as REDIS_PASSWORD>@host.docker.internal:6379
 AWS_S3_BUCKET=vlainter-local
 AWS_REGION=ap-northeast-2
 AWS_S3_ENDPOINT=http://minio:9000
+AWS_S3_PATH_STYLE_ACCESS=true
 ```
 
-MinIO commonly requires S3 path-style access. If uploads fail after the app is attached, add a backend config flag for path-style access in `S3Config`.
+MinIO commonly requires S3 path-style access, so local deployments should keep `AWS_S3_PATH_STYLE_ACCESS=true`.
 
 The MinIO images are intentionally `latest` during the first smoke-test phase to avoid pinning an unverified tag. Pin tested digests or release tags before treating this as a production deployment file.
 
