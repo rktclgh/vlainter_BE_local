@@ -20,6 +20,8 @@ services:
       - ../.env
     environment:
       SERVER_PORT: 18080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:18080:18080"
     networks:
@@ -33,6 +35,8 @@ services:
       - ../.env
     environment:
       SERVER_PORT: 18081
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:18081:18081"
     networks:
