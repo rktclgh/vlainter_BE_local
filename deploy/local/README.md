@@ -115,6 +115,25 @@ AWS_S3_PATH_STYLE_ACCESS=true
 
 MinIO commonly requires S3 path-style access, so local deployments should keep `AWS_S3_PATH_STYLE_ACCESS=true`.
 
+## Hermes Generation And Gemini Embeddings
+
+Local migration separates generation and embeddings:
+
+```properties
+AI_PROVIDER=HERMES
+AI_EMBEDDING_PROVIDER=GEMINI
+GEMINI_API_KEY=<your-gemini-api-key>
+GEMINI_EMBEDDING_MODEL=gemini-embedding-001
+GEMINI_EMBEDDING_OUTPUT_DIMENSIONALITY=768
+HERMES_ENDPOINT=http://host.docker.internal:8788/generate
+HERMES_PROFILE=vlainter-stateless-llm
+BEDROCK_ENABLED=false
+```
+
+The Hermes side should be exposed as a stateless one-shot endpoint for VlaInter. Use a dedicated Hermes profile such as `vlainter-stateless-llm` with memory, tools, workspace side effects, and session carryover disabled or ignored. VlaInter sends one prompt per request and expects one JSON-compatible response body.
+
+Do not point VlaInter directly at a stateful chat/session endpoint unless that endpoint is wrapped so each call is isolated.
+
 The MinIO images are intentionally `latest` during the first smoke-test phase to avoid pinning an unverified tag. Pin tested digests or release tags before treating this as a production deployment file.
 
 ## Safe Reset
