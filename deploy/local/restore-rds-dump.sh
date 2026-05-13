@@ -32,11 +32,20 @@ set +a
 
 export PGPASSWORD="$POSTGRES_PASSWORD"
 
+RESTORE_LIST="$(mktemp)"
+trap 'rm -f "$RESTORE_LIST"' EXIT
+
+pg_restore --list "$DUMP_FILE" \
+  | grep -v 'EXTENSION - vector' \
+  | grep -v 'COMMENT - EXTENSION vector' \
+  > "$RESTORE_LIST"
+
 pg_restore \
   --host 127.0.0.1 \
   --port 5432 \
   --username "$POSTGRES_USER" \
   --dbname "$POSTGRES_DB" \
+  --use-list "$RESTORE_LIST" \
   --clean \
   --if-exists \
   --no-owner \
