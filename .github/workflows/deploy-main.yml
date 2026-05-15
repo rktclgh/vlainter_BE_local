@@ -31,17 +31,13 @@ jobs:
       - name: Checkout BE (this repo)
         uses: actions/checkout@v4
 
-      - name: Verify FE checkout secret
-        run: |
-          [ -n "${{ secrets.CI_GITHUB_TOKEN }}" ] || (echo "Missing CI_GITHUB_TOKEN" && exit 1)
-
       - name: Checkout FE (local migration branch)
         uses: actions/checkout@v4
         with:
           repository: ${{ env.FE_REPO }}
           ref: ${{ github.event.client_payload.fe_ref || env.FE_REF }}
           path: fe-src
-          token: ${{ secrets.CI_GITHUB_TOKEN }}
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
