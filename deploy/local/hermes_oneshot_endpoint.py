@@ -34,6 +34,29 @@ def _json_response(handler: BaseHTTPRequestHandler, status: int, payload: dict[s
     handler.wfile.write(body)
 
 
+def _read_body(handler: BaseHTTPRequestHandler) -> bytes:
+    length_header = handler.headers.get("Content-Length")
+    if length_header:
+        return handler.rfile.read(int(length_header))
+
+    transfer_encoding = handler.headers.get("Transfer-Encoding", "")
+    if "chunked" not in transfer_encoding.lower():
+        return b""
+
+    chunks: list[bytes] = []
+    while True:
+        size_line = handler.rfile.readline().split(b";", 1)[0].strip()
+        if not size_line:
+            continue
+        size = int(size_line, 16)
+        if size == 0:
+            handler.rfile.readline()
+            break
+        chunks.append(handler.rfile.read(size))
+        handler.rfile.read(2)
+    return b"".join(chunks)
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "vlainter-hermes-oneshot/1.0"
 
@@ -55,13 +78,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
         try:
-            length = int(self.headers.get("Content-Length", "0"))
-        except ValueError:
-            _json_response(self, 400, {"error": "invalid_content_length"})
-            return
-
-        try:
-            payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+            payload = json.loads(_read_body(self).decode("utf-8") or "{}")
         except json.JSONDecodeError as exc:
             _json_response(self, 400, {"error": "invalid_json", "message": str(exc)})
             return
