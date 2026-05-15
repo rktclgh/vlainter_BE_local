@@ -54,7 +54,6 @@ The backend repository workflow builds the frontend bundle, packages the Spring 
 Set these secrets on `rktclgh/vlainter_BE_local`:
 
 ```text
-CI_GITHUB_TOKEN
 DOCKERHUB_USERNAME
 DOCKERHUB_TOKEN
 VITE_KAKAO_CLIENT_ID
@@ -72,7 +71,7 @@ Set this secret on `rktclgh/vlainter_FE_local`:
 CI_GITHUB_TOKEN
 ```
 
-The token must be able to read the FE repository from the BE workflow and create a `repository_dispatch` event in `rktclgh/vlainter_BE_local`.
+The backend workflow checks out `rktclgh/vlainter_FE_local` as a public repository and does not need a persistent PAT for that step. The FE repository only needs `CI_GITHUB_TOKEN` if FE-only `main` pushes should automatically dispatch a BE redeploy. Use a dedicated fine-grained PAT for that secret, not a long-lived personal CLI token. It must be able to create a `repository_dispatch` event in `rktclgh/vlainter_BE_local`.
 
 Optional repository variable on `rktclgh/vlainter_BE_local`:
 
