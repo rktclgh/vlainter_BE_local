@@ -174,10 +174,24 @@ GEMINI_EMBEDDING_MODEL=gemini-embedding-001
 GEMINI_EMBEDDING_OUTPUT_DIMENSIONALITY=768
 HERMES_ENDPOINT=http://host.docker.internal:8788/generate
 HERMES_PROFILE=vlainter-stateless-llm
+HERMES_ENDPOINT_BIND=0.0.0.0
+HERMES_ENDPOINT_PORT=8788
+HERMES_CLI_PROVIDER=openai-codex
+HERMES_CLI_MODEL=gpt-5.4-mini
+HERMES_CLI_TIMEOUT_SECONDS=180
 BEDROCK_ENABLED=false
 ```
 
-Do not keep `HERMES_ENDPOINT` pointed at the old Mac test endpoint. For server deployment, run a Hermes-compatible one-shot endpoint on the Ubuntu server or temporarily switch `AI_PROVIDER` back to a reachable provider before production traffic.
+Do not keep `HERMES_ENDPOINT` pointed at the old Mac test endpoint. The local server endpoint is provided by `deploy/local/hermes_oneshot_endpoint.py`, which wraps the Ubuntu server's Hermes CLI one-shot mode and exposes `POST /generate`.
+
+Install or refresh the endpoint service after syncing `deploy/` to the server:
+
+```bash
+sudo cp /home/song/Desktop/vlainter/deploy/systemd/vlainter-hermes-endpoint.service /etc/systemd/system/vlainter-hermes-endpoint.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now vlainter-hermes-endpoint.service
+curl http://127.0.0.1:8788/health
+```
 
 The Hermes side should be exposed as a stateless one-shot endpoint for VlaInter. Use a dedicated Hermes profile such as `vlainter-stateless-llm` with memory, tools, workspace side effects, and session carryover disabled or ignored. VlaInter sends one prompt per request and expects one JSON-compatible response body.
 
