@@ -5,7 +5,7 @@ name: PR 자동화
 on:
   pull_request:
     branches: [ main ]
-    types: [ opened ]
+    types: [ opened, synchronize, reopened ]
 
 # 실행할 작업
 jobs:
@@ -60,10 +60,10 @@ jobs:
         with:
           labels: chore
 
-
-      # 프로젝트에 등록
-      - name: GitHub 프로젝트에 추가
-        uses: actions/add-to-project@v1.0.2
-        with:
-          project-url: "https://github.com/users/rktclgh/projects/5"
-          github-token: ${{ secrets.PROJECT_ACCESS_TOKEN }}
+      # GitHub Project/Kanban 연동은 현재 로컬 마이그레이션 repo에서 사용하지 않는다.
+      # 프로젝트 보드나 PROJECT_ACCESS_TOKEN secret이 없으면 PR 체크가 실패하므로 비활성화한다.
+      # - name: GitHub 프로젝트에 추가
+      #   uses: actions/add-to-project@v1.0.2
+      #   with:
+      #     project-url: "https://github.com/users/rktclgh/projects/5"
+      #     github-token: ${{ secrets.PROJECT_ACCESS_TOKEN }}
