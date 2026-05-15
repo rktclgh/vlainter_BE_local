@@ -11,8 +11,6 @@ on:
 jobs:
   automate-pr:
     runs-on: ubuntu-latest
-    env:
-      PROJECT_ACCESS_TOKEN: ${{ secrets.PROJECT_ACCESS_TOKEN }}
     permissions:
       pull-requests: write
       issues: write
@@ -62,15 +60,10 @@ jobs:
         with:
           labels: chore
 
-
-      # 프로젝트에 등록
-      - name: GitHub 프로젝트 토큰 확인
-        if: env.PROJECT_ACCESS_TOKEN == ''
-        run: echo "::notice title=PROJECT_ACCESS_TOKEN missing::GitHub Project 추가를 건너뜁니다. 프로젝트 자동 등록이 필요하면 PROJECT_ACCESS_TOKEN secret을 설정하세요."
-
-      - name: GitHub 프로젝트에 추가
-        if: env.PROJECT_ACCESS_TOKEN != ''
-        uses: actions/add-to-project@v1.0.2
-        with:
-          project-url: "https://github.com/users/rktclgh/projects/5"
-          github-token: ${{ env.PROJECT_ACCESS_TOKEN }}
+      # GitHub Project/Kanban 연동은 현재 로컬 마이그레이션 repo에서 사용하지 않는다.
+      # 프로젝트 보드나 PROJECT_ACCESS_TOKEN secret이 없으면 PR 체크가 실패하므로 비활성화한다.
+      # - name: GitHub 프로젝트에 추가
+      #   uses: actions/add-to-project@v1.0.2
+      #   with:
+      #     project-url: "https://github.com/users/rktclgh/projects/5"
+      #     github-token: ${{ secrets.PROJECT_ACCESS_TOKEN }}

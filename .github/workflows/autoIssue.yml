@@ -10,8 +10,6 @@ on:
 jobs:
   automate-issue:
     runs-on: ubuntu-latest
-    env:
-      PROJECT_ACCESS_TOKEN: ${{ secrets.PROJECT_ACCESS_TOKEN }}
     permissions:
       issues: write
       contents: read
@@ -47,17 +45,12 @@ jobs:
         uses: actions-ecosystem/action-add-labels@v1
         with:
           labels: chore
-
-      # 프로젝트의 'Backlog' 컬럼에 자동 추가
-      - name: GitHub 프로젝트 토큰 확인
-        if: env.PROJECT_ACCESS_TOKEN == ''
-        run: echo "::notice title=PROJECT_ACCESS_TOKEN missing::GitHub Project 추가를 건너뜁니다. 프로젝트 자동 등록이 필요하면 PROJECT_ACCESS_TOKEN secret을 설정하세요."
-
-      - name : Github 프로젝트에 추가
-        if: env.PROJECT_ACCESS_TOKEN != ''
-        uses: jinhokim98/project-flow-add-issue-to-project@v1
-        with:
-          github_token: ${{ env.PROJECT_ACCESS_TOKEN }}
-          project_owner: rktclgh
-          project_number: 5
-          target_column: 'Backlog'
+      # GitHub Project/Kanban 연동은 현재 로컬 마이그레이션 repo에서 사용하지 않는다.
+      # 프로젝트 보드나 PROJECT_ACCESS_TOKEN secret이 없으면 이슈 자동화가 실패하므로 비활성화한다.
+      # - name : Github 프로젝트에 추가
+      #   uses: jinhokim98/project-flow-add-issue-to-project@v1
+      #   with:
+      #     github_token: ${{ secrets.PROJECT_ACCESS_TOKEN }}
+      #     project_owner: rktclgh
+      #     project_number: 5
+      #     target_column: 'Backlog'
