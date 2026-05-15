@@ -782,6 +782,7 @@ class InterviewPracticeService(
         val providerLabel = when (ex.provider) {
             AiProvider.BEDROCK -> "Bedrock"
             AiProvider.GEMINI -> "Gemini"
+            AiProvider.HERMES -> "Hermes"
         }
         return ResponseStatusException(
             status,

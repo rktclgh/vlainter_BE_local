@@ -46,9 +46,13 @@ class LlmProviderRouter(
         aiRoutingContextHolder.markUsed(targetProvider.provider)
         return try {
             targetProvider.generateJson(prompt, temperature, maxOutputTokens)
-        } catch (ex: GeminiTransientException) {
+        } catch (ex: AiProviderTransientException) {
             val fallbackProvider = bedrockProvider
-            if (targetProvider.provider != AiProvider.GEMINI || fallbackProvider == null || !fallbackProvider.isEnabled()) {
+            if (targetProvider.provider != AiProvider.GEMINI ||
+                ex.provider != AiProvider.GEMINI ||
+                fallbackProvider == null ||
+                !fallbackProvider.isEnabled()
+            ) {
                 throw ex
             }
             aiRoutingContextHolder.markGeminiExhausted()

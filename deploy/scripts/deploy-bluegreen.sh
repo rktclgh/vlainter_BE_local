@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-DEPLOY_DIR="${DEPLOY_DIR:-/home/ubuntu/vlainter}"
+DEPLOY_DIR="${DEPLOY_DIR:-/home/song/Desktop/vlainter}"
 IMAGE_TAG="${IMAGE_TAG:?IMAGE_TAG is required}"
 DOCKERHUB_USERNAME="${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME is required}"
 DOCKERHUB_TOKEN="${DOCKERHUB_TOKEN:?DOCKERHUB_TOKEN is required}"
@@ -11,6 +11,8 @@ HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-180}"
 HEALTH_INTERVAL_SECONDS="${HEALTH_INTERVAL_SECONDS:-3}"
 PROXY_CHECK_PATH="${PROXY_CHECK_PATH:-/}"
 PROXY_CHECK_TIMEOUT_SECONDS="${PROXY_CHECK_TIMEOUT_SECONDS:-30}"
+PUBLIC_HEALTH_URL="${PUBLIC_HEALTH_URL:-}"
+PUBLIC_HEALTH_TIMEOUT_SECONDS="${PUBLIC_HEALTH_TIMEOUT_SECONDS:-60}"
 CURL_MAX_TIME_SECONDS="${CURL_MAX_TIME_SECONDS:-10}"
 
 cd "$DEPLOY_DIR"
@@ -115,6 +117,19 @@ until curl -fsS --max-time "$CURL_MAX_TIME_SECONDS" "http://127.0.0.1:8080${PROX
   fi
   sleep 1
 done
+
+if [ -n "$PUBLIC_HEALTH_URL" ]; then
+  echo "[INFO] public endpoint 응답 확인 중: ${PUBLIC_HEALTH_URL}"
+  public_deadline=$((SECONDS + PUBLIC_HEALTH_TIMEOUT_SECONDS))
+  until curl -fsS --max-time "$CURL_MAX_TIME_SECONDS" "$PUBLIC_HEALTH_URL" >/dev/null 2>&1; do
+    if [ "$SECONDS" -ge "$public_deadline" ]; then
+      echo "[ERROR] public endpoint 응답 확인 실패: ${PUBLIC_HEALTH_URL}"
+      docker logs vlainter-proxy --tail 200 || true
+      exit 1
+    fi
+    sleep 2
+  done
+fi
 
 if [ -n "$previous_color" ] && docker ps --format '{{.Names}}' | grep -q "^vlainter-app-${previous_color}\$"; then
   echo "[INFO] 이전 컨테이너 중지: ${previous_color}"

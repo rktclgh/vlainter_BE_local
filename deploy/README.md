@@ -1,6 +1,12 @@
 # Blue/Green Deployment
 
-이 디렉터리는 EC2 단일 서버에서 `nginx + blue/green app container` 방식으로 무중단에 가깝게 배포하기 위한 파일을 담는다.
+이 디렉터리는 단일 Ubuntu 서버에서 `host nginx + docker nginx proxy + blue/green app container` 방식으로 무중단에 가깝게 배포하기 위한 파일을 담는다.
+
+현재 운영 도메인:
+
+```text
+https://vlainter.rktclgh.site
+```
 
 구성:
 - `docker-compose.bluegreen.yml`
@@ -22,6 +28,9 @@
 - 기존 단일 컨테이너 `vlainter-app` 구조에서 처음 넘어올 때는 `proxy`가 `8080`을 잡기 위해 레거시 컨테이너를 정리한다.
 - 이 첫 전환 때만 아주 짧은 포트 바인딩 공백이 생길 수 있다.
 - `app-blue`, `app-green`은 `restart: unless-stopped`로 유지해 비활성 색상이 재부팅 후 자동 기동되지 않도록 한다.
-- `proxy`는 `127.0.0.1:8080`에만 바인딩해 host nginx를 우회한 직접 접근을 막는다.
+- `proxy`는 기본적으로 `127.0.0.1:8080`에만 바인딩해 host nginx를 우회한 직접 접근을 막는다.
+- 임시 LAN 테스트가 필요하면 서버 `.env`에 `PROXY_BIND_ADDR=<server-lan-ip>`를 설정한다.
 - 운영 배포에서는 `TRUSTED_PROXY_CIDRS`를 반드시 설정하고, 앱은 proxy가 주입하는 `X-Internal-Client-IP`만 클라이언트 IP로 신뢰한다.
 - host nginx는 Cloudflare real IP를 복원한 뒤 backend proxy로 넘길 때 `proxy_set_header X-Internal-Client-IP $remote_addr;`를 명시해야 한다.
+- host nginx 설정 템플릿은 `host-nginx/vlainter.conf`에 있으며, Let's Encrypt 인증서 경로는 `vlainter.rktclgh.site` 기준이다.
+- GitHub Actions public health check는 `rktclgh/vlainter_BE_local` repository variable `PUBLIC_HEALTH_URL=https://vlainter.rktclgh.site/actuator/health`를 설정한 뒤 활성화한다.

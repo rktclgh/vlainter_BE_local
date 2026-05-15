@@ -1,0 +1,18 @@
+[Unit]
+Description=VlaInter Hermes one-shot endpoint
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=song
+Group=song
+WorkingDirectory=/home/song/Desktop/vlainter
+Environment=HERMES_HOME=/home/song/.hermes
+EnvironmentFile=/home/song/Desktop/vlainter/.env
+ExecStart=/usr/bin/python3 /home/song/Desktop/vlainter/deploy/local/hermes_oneshot_endpoint.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

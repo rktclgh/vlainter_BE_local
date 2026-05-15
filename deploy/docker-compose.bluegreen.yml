@@ -4,7 +4,7 @@ services:
     container_name: vlainter-proxy
     restart: always
     ports:
-      - "127.0.0.1:8080:8080"
+      - "${PROXY_BIND_ADDR:-127.0.0.1}:8080:8080"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
@@ -20,6 +20,8 @@ services:
       - ../.env
     environment:
       SERVER_PORT: 18080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:18080:18080"
     networks:
@@ -33,6 +35,8 @@ services:
       - ../.env
     environment:
       SERVER_PORT: 18081
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "127.0.0.1:18081:18081"
     networks:

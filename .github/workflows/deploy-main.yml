@@ -1,22 +1,26 @@
-name: deploy-on-main
+name: deploy-local-ubuntu
 
 on:
   push:
     branches: ["main"]
   repository_dispatch:
-    types: [fe-updated]
-  workflow_dispatch:
+    types: [fe-updated-local]
+  workflow_dispatch: {}
 
 env:
   BACKEND_DIR: .
-  FE_REPO: rktclgh/VlaInter_FE
-  IMAGE_NAME: songchih/vlainter-backend
+  FE_REPO: rktclgh/vlainter_FE_local
+  FE_REF: main
+  IMAGE_NAME: songchih/vlainter-backend-local
+  DEPLOY_DIR: /home/song/Desktop/vlainter
+  APP_DOMAIN: vlainter.rktclgh.site
+  PUBLIC_BASE_URL: https://vlainter.rktclgh.site
 
 permissions:
   contents: read
 
 concurrency:
-  group: deploy-main
+  group: deploy-local-ubuntu
   cancel-in-progress: true
 
 jobs:
@@ -27,11 +31,15 @@ jobs:
       - name: Checkout BE (this repo)
         uses: actions/checkout@v4
 
-      - name: Checkout FE (main)
+      - name: Verify FE checkout secret
+        run: |
+          [ -n "${{ secrets.CI_GITHUB_TOKEN }}" ] || (echo "Missing CI_GITHUB_TOKEN" && exit 1)
+
+      - name: Checkout FE (local migration branch)
         uses: actions/checkout@v4
         with:
           repository: ${{ env.FE_REPO }}
-          ref: main
+          ref: ${{ github.event.client_payload.fe_ref || env.FE_REF }}
           path: fe-src
           token: ${{ secrets.CI_GITHUB_TOKEN }}
 
@@ -46,16 +54,20 @@ jobs:
         working-directory: fe-src
         run: npm ci
 
-      - name: Create FE .env from secrets (optional)
+      - name: Verify FE production secrets
+        run: |
+          [ -n "${{ secrets.VITE_KAKAO_CLIENT_ID }}" ] || (echo "Missing VITE_KAKAO_CLIENT_ID" && exit 1)
+
+      - name: Create FE .env from deployment config
         working-directory: fe-src
         run: |
           rm -f .env
           {
-            echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}"
-            echo "VITE_KAKAO_AUTH_URI=${{ secrets.VITE_KAKAO_AUTH_URI }}"
+            echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL || env.PUBLIC_BASE_URL }}"
+            echo "VITE_KAKAO_AUTH_URI=${{ secrets.VITE_KAKAO_AUTH_URI || 'https://kauth.kakao.com/oauth/authorize' }}"
             echo "VITE_KAKAO_CLIENT_ID=${{ secrets.VITE_KAKAO_CLIENT_ID }}"
-            echo "VITE_KAKAO_REDIRECT_URI=${{ secrets.VITE_KAKAO_REDIRECT_URI }}"
-            echo "VITE_FRONTEND_BASE_URL=${{ secrets.VITE_FRONTEND_BASE_URL }}"
+            echo "VITE_KAKAO_REDIRECT_URI=${{ secrets.VITE_KAKAO_REDIRECT_URI || format('{0}/auth/kakao/callback', env.PUBLIC_BASE_URL) }}"
+            echo "VITE_FRONTEND_BASE_URL=${{ secrets.VITE_FRONTEND_BASE_URL || env.PUBLIC_BASE_URL }}"
           } >> .env
 
       - name: Build FE
@@ -103,43 +115,38 @@ jobs:
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-  deploy-ec2:
+  deploy-local-ubuntu:
     needs: build-and-push
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, local-ubuntu]
+    environment:
+      name: local-ubuntu
+      url: ${{ env.PUBLIC_BASE_URL }}
 
     steps:
       - name: Checkout BE (this repo)
         uses: actions/checkout@v4
 
-      - name: Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
-
-      - name: Add EC2 host to known_hosts
-        run: ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Upload deploy assets
-        env:
-          EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_HOST: ${{ secrets.EC2_HOST }}
+      - name: Verify local runner environment
         run: |
-          ssh ${EC2_USER:-ubuntu}@${EC2_HOST} "mkdir -p /home/ubuntu/vlainter/deploy"
-          scp -r deploy/* ${EC2_USER:-ubuntu}@${EC2_HOST}:/home/ubuntu/vlainter/deploy/
+          [ "$(uname -s)" = "Linux" ] || (echo "Deploy runner must be Linux" && exit 1)
+          command -v docker >/dev/null || (echo "Docker is required on the self-hosted runner" && exit 1)
+          docker compose version >/dev/null || (echo "Docker Compose plugin is required on the self-hosted runner" && exit 1)
+          [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] || (echo "Missing DOCKERHUB_USERNAME" && exit 1)
+          [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ] || (echo "Missing DOCKERHUB_TOKEN" && exit 1)
 
-      - name: Deploy to EC2
+      - name: Sync deploy assets locally
+        run: |
+          mkdir -p "${DEPLOY_DIR}/deploy"
+          cp -a deploy/. "${DEPLOY_DIR}/deploy/"
+
+      - name: Deploy through local Docker
         env:
-          EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_HOST: ${{ secrets.EC2_HOST }}
           IMAGE_TAG: ${{ env.IMAGE_NAME }}:${{ github.sha }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          PROXY_CHECK_PATH: /actuator/health
+          PUBLIC_HEALTH_URL: ${{ vars.PUBLIC_HEALTH_URL }}
         run: |
-          ssh ${EC2_USER:-ubuntu}@${EC2_HOST} \
-            "IMAGE_TAG='${IMAGE_TAG}' DOCKERHUB_USERNAME='${DOCKERHUB_USERNAME}' DOCKERHUB_TOKEN='${DOCKERHUB_TOKEN}' bash -se" <<'EOF'
-          set -euo pipefail
-
-          DEPLOY_DIR=/home/ubuntu/vlainter
           mkdir -p "$DEPLOY_DIR"
           cd "$DEPLOY_DIR"
 
@@ -149,7 +156,13 @@ jobs:
           fi
 
           chmod +x deploy/scripts/deploy-bluegreen.sh
-          DEPLOY_DIR="$DEPLOY_DIR" IMAGE_TAG="$IMAGE_TAG" DOCKERHUB_USERNAME="$DOCKERHUB_USERNAME" DOCKERHUB_TOKEN="$DOCKERHUB_TOKEN" ./deploy/scripts/deploy-bluegreen.sh
+          DEPLOY_DIR="$DEPLOY_DIR" \
+          IMAGE_TAG="$IMAGE_TAG" \
+          DOCKERHUB_USERNAME="$DOCKERHUB_USERNAME" \
+          DOCKERHUB_TOKEN="$DOCKERHUB_TOKEN" \
+          PROXY_CHECK_PATH="$PROXY_CHECK_PATH" \
+          PUBLIC_HEALTH_URL="$PUBLIC_HEALTH_URL" \
+            ./deploy/scripts/deploy-bluegreen.sh
 
           running_apps="$(docker ps --format '{{.Names}}' | grep -c '^vlainter-app-' || true)"
           running_apps="$(printf '%s' "$running_apps" | tr -d ' ')"
@@ -158,4 +171,3 @@ jobs:
             docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
             exit 1
           fi
-          EOF

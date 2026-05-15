@@ -4,6 +4,7 @@ import com.cw.vlainter.global.config.properties.S3Properties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.s3.S3Configuration
 import software.amazon.awssdk.services.s3.S3Client
 import java.net.URI
 
@@ -15,6 +16,11 @@ class S3Config(
     fun s3Client(): S3Client {
         val builder = S3Client.builder()
             .region(Region.of(s3Properties.region.trim()))
+            .serviceConfiguration(
+                S3Configuration.builder()
+                    .pathStyleAccessEnabled(s3Properties.pathStyleAccess)
+                    .build()
+            )
 
         if (s3Properties.endpoint.isNotBlank()) {
             builder.endpointOverride(URI.create(s3Properties.endpoint.trim()))

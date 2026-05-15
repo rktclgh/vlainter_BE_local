@@ -11,9 +11,9 @@ class EmbeddingProviderRouter(
     private val providersByType = providers.associateBy { it.provider }
 
     fun embedText(text: String): EmbeddingGenerationResult {
-        val targetProvider = providersByType[aiProperties.provider]
-            ?: error("등록되지 않은 임베딩 provider 입니다: ${aiProperties.provider}")
-        check(targetProvider.isEnabled()) { "임베딩 provider(${aiProperties.provider}) 설정이 비활성화되어 있습니다." }
+        val targetProvider = providersByType[aiProperties.embeddingProvider]
+            ?: error("등록되지 않은 임베딩 provider 입니다: ${aiProperties.embeddingProvider}")
+        check(targetProvider.isEnabled()) { "임베딩 provider(${aiProperties.embeddingProvider}) 설정이 비활성화되어 있습니다." }
         return targetProvider.embedText(text)
     }
 }
