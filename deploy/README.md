@@ -1,6 +1,12 @@
 # Blue/Green Deployment
 
-이 디렉터리는 EC2 단일 서버에서 `nginx + blue/green app container` 방식으로 무중단에 가깝게 배포하기 위한 파일을 담는다.
+이 디렉터리는 단일 Ubuntu 서버에서 `host nginx + docker nginx proxy + blue/green app container` 방식으로 무중단에 가깝게 배포하기 위한 파일을 담는다.
+
+현재 운영 도메인:
+
+```text
+https://vlainter.rktclgh.site
+```
 
 구성:
 - `docker-compose.bluegreen.yml`
@@ -26,3 +32,5 @@
 - 임시 LAN 테스트가 필요하면 서버 `.env`에 `PROXY_BIND_ADDR=<server-lan-ip>`를 설정한다.
 - 운영 배포에서는 `TRUSTED_PROXY_CIDRS`를 반드시 설정하고, 앱은 proxy가 주입하는 `X-Internal-Client-IP`만 클라이언트 IP로 신뢰한다.
 - host nginx는 Cloudflare real IP를 복원한 뒤 backend proxy로 넘길 때 `proxy_set_header X-Internal-Client-IP $remote_addr;`를 명시해야 한다.
+- host nginx 설정 템플릿은 `host-nginx/vlainter.conf`에 있으며, Let's Encrypt 인증서 경로는 `vlainter.rktclgh.site` 기준이다.
+- GitHub Actions public health check는 `rktclgh/vlainter_BE_local` repository variable `PUBLIC_HEALTH_URL=https://vlainter.rktclgh.site/actuator/health`를 설정한 뒤 활성화한다.

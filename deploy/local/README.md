@@ -41,6 +41,47 @@ The self-hosted runner is only the deployment executor. Build work stays on GitH
 
 Do not expose SSH only for CI/CD. The runner connects outbound to GitHub and receives jobs from there.
 
+Production domain for this migration:
+
+```text
+https://vlainter.rktclgh.site
+```
+
+The backend repository workflow builds the frontend bundle, packages the Spring Boot app image, pushes it to DockerHub, and then dispatches only the deploy phase to the self-hosted runner. The frontend repository workflow only sends `repository_dispatch` to the backend repository when FE `main` changes.
+
+### GitHub Repository Secrets And Variables
+
+Set these secrets on `rktclgh/vlainter_BE_local`:
+
+```text
+CI_GITHUB_TOKEN
+DOCKERHUB_USERNAME
+DOCKERHUB_TOKEN
+VITE_KAKAO_CLIENT_ID
+VITE_KAKAO_AUTH_URI
+VITE_KAKAO_REDIRECT_URI
+VITE_API_BASE_URL
+VITE_FRONTEND_BASE_URL
+```
+
+`VITE_API_BASE_URL`, `VITE_FRONTEND_BASE_URL`, `VITE_KAKAO_AUTH_URI`, and `VITE_KAKAO_REDIRECT_URI` have safe workflow defaults for `vlainter.rktclgh.site`, but setting them explicitly keeps the production build independent from workflow defaults.
+
+Set this secret on `rktclgh/vlainter_FE_local`:
+
+```text
+CI_GITHUB_TOKEN
+```
+
+The token must be able to read the FE repository from the BE workflow and create a `repository_dispatch` event in `rktclgh/vlainter_BE_local`.
+
+Optional repository variable on `rktclgh/vlainter_BE_local`:
+
+```text
+PUBLIC_HEALTH_URL=https://vlainter.rktclgh.site/actuator/health
+```
+
+Add `PUBLIC_HEALTH_URL` after host Nginx and HTTPS are ready. When this variable is set, each deployment verifies the public HTTPS endpoint after the internal blue/green switch.
+
 ## Host PostgreSQL And Redis
 
 Install host-level PostgreSQL 17, pgvector, and Redis once per server:
@@ -77,6 +118,12 @@ REDIS_HOST=host.docker.internal
 REDIS_PORT=6379
 REDIS_PASSWORD=<same as REDIS_PASSWORD>
 REDIS_SSL_ENABLED=false
+COOKIE_DOMAIN=vlainter.rktclgh.site
+COOKIE_SECURE=true
+CORS_ALLOWED_ORIGINS=https://vlainter.rktclgh.site
+REDIRECT_ALLOWED_ORIGINS=https://vlainter.rktclgh.site,vlainter://auth/callback
+KAKAO_REDIRECT_URI=https://vlainter.rktclgh.site/auth/kakao/callback
+TRUSTED_PROXY_CIDRS=127.0.0.1/32,172.16.0.0/12,::1/128
 ```
 
 ## First Run
@@ -129,6 +176,8 @@ HERMES_ENDPOINT=http://host.docker.internal:8788/generate
 HERMES_PROFILE=vlainter-stateless-llm
 BEDROCK_ENABLED=false
 ```
+
+Do not keep `HERMES_ENDPOINT` pointed at the old Mac test endpoint. For server deployment, run a Hermes-compatible one-shot endpoint on the Ubuntu server or temporarily switch `AI_PROVIDER` back to a reachable provider before production traffic.
 
 The Hermes side should be exposed as a stateless one-shot endpoint for VlaInter. Use a dedicated Hermes profile such as `vlainter-stateless-llm` with memory, tools, workspace side effects, and session carryover disabled or ignored. VlaInter sends one prompt per request and expects one JSON-compatible response body.
 

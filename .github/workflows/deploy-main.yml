@@ -13,6 +13,8 @@ env:
   FE_REF: main
   IMAGE_NAME: songchih/vlainter-backend-local
   DEPLOY_DIR: /home/song/Desktop/vlainter
+  APP_DOMAIN: vlainter.rktclgh.site
+  PUBLIC_BASE_URL: https://vlainter.rktclgh.site
 
 permissions:
   contents: read
@@ -37,7 +39,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ env.FE_REPO }}
-          ref: ${{ env.FE_REF }}
+          ref: ${{ github.event.client_payload.fe_ref || env.FE_REF }}
           path: fe-src
           token: ${{ secrets.CI_GITHUB_TOKEN }}
 
@@ -52,16 +54,20 @@ jobs:
         working-directory: fe-src
         run: npm ci
 
-      - name: Create FE .env from secrets (optional)
+      - name: Verify FE production secrets
+        run: |
+          [ -n "${{ secrets.VITE_KAKAO_CLIENT_ID }}" ] || (echo "Missing VITE_KAKAO_CLIENT_ID" && exit 1)
+
+      - name: Create FE .env from deployment config
         working-directory: fe-src
         run: |
           rm -f .env
           {
-            echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}"
-            echo "VITE_KAKAO_AUTH_URI=${{ secrets.VITE_KAKAO_AUTH_URI }}"
+            echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL || env.PUBLIC_BASE_URL }}"
+            echo "VITE_KAKAO_AUTH_URI=${{ secrets.VITE_KAKAO_AUTH_URI || 'https://kauth.kakao.com/oauth/authorize' }}"
             echo "VITE_KAKAO_CLIENT_ID=${{ secrets.VITE_KAKAO_CLIENT_ID }}"
-            echo "VITE_KAKAO_REDIRECT_URI=${{ secrets.VITE_KAKAO_REDIRECT_URI }}"
-            echo "VITE_FRONTEND_BASE_URL=${{ secrets.VITE_FRONTEND_BASE_URL }}"
+            echo "VITE_KAKAO_REDIRECT_URI=${{ secrets.VITE_KAKAO_REDIRECT_URI || format('{0}/auth/kakao/callback', env.PUBLIC_BASE_URL) }}"
+            echo "VITE_FRONTEND_BASE_URL=${{ secrets.VITE_FRONTEND_BASE_URL || env.PUBLIC_BASE_URL }}"
           } >> .env
 
       - name: Build FE
@@ -112,7 +118,9 @@ jobs:
   deploy-local-ubuntu:
     needs: build-and-push
     runs-on: [self-hosted, linux, local-ubuntu]
-    environment: local-ubuntu
+    environment:
+      name: local-ubuntu
+      url: ${{ env.PUBLIC_BASE_URL }}
 
     steps:
       - name: Checkout BE (this repo)
@@ -136,6 +144,8 @@ jobs:
           IMAGE_TAG: ${{ env.IMAGE_NAME }}:${{ github.sha }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          PROXY_CHECK_PATH: /actuator/health
+          PUBLIC_HEALTH_URL: ${{ vars.PUBLIC_HEALTH_URL }}
         run: |
           mkdir -p "$DEPLOY_DIR"
           cd "$DEPLOY_DIR"
@@ -150,6 +160,8 @@ jobs:
           IMAGE_TAG="$IMAGE_TAG" \
           DOCKERHUB_USERNAME="$DOCKERHUB_USERNAME" \
           DOCKERHUB_TOKEN="$DOCKERHUB_TOKEN" \
+          PROXY_CHECK_PATH="$PROXY_CHECK_PATH" \
+          PUBLIC_HEALTH_URL="$PUBLIC_HEALTH_URL" \
             ./deploy/scripts/deploy-bluegreen.sh
 
           running_apps="$(docker ps --format '{{.Names}}' | grep -c '^vlainter-app-' || true)"
