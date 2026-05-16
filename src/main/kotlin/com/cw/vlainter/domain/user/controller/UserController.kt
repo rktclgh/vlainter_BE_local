@@ -2,7 +2,6 @@ package com.cw.vlainter.domain.user.controller
 
 import com.cw.vlainter.domain.user.dto.ChangeMyPasswordRequest
 import com.cw.vlainter.domain.user.dto.UpdateMyAcademicProfileRequest
-import com.cw.vlainter.domain.user.dto.UpdateGeminiApiKeyRequest
 import com.cw.vlainter.domain.user.dto.UpdateMyProfileRequest
 import com.cw.vlainter.domain.user.dto.UpdateMyServiceModeRequest
 import com.cw.vlainter.domain.user.dto.UserProfileResponse
@@ -17,7 +16,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
-import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
@@ -59,21 +57,6 @@ class UserController(
         @Valid @RequestBody request: UpdateMyAcademicProfileRequest
     ): ResponseEntity<UserProfileResponse> {
         return ResponseEntity.ok(userService.updateMyAcademicProfile(principal, request))
-    }
-
-    @PutMapping("/me/gemini-api-key")
-    fun updateMyGeminiApiKey(
-        @AuthenticationPrincipal principal: AuthPrincipal,
-        @Valid @RequestBody request: UpdateGeminiApiKeyRequest
-    ): ResponseEntity<UserProfileResponse> {
-        return ResponseEntity.ok(userService.updateMyGeminiApiKey(principal, request))
-    }
-
-    @DeleteMapping("/me/gemini-api-key")
-    fun clearMyGeminiApiKey(
-        @AuthenticationPrincipal principal: AuthPrincipal
-    ): ResponseEntity<UserProfileResponse> {
-        return ResponseEntity.ok(userService.clearMyGeminiApiKey(principal))
     }
 
     @PatchMapping("/me/password")

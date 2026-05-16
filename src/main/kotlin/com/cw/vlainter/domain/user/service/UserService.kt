@@ -11,7 +11,6 @@ import com.cw.vlainter.domain.user.dto.AdminMemberSummaryResponse
 import com.cw.vlainter.domain.user.dto.ChangeMyPasswordRequest
 import com.cw.vlainter.domain.academic.service.AcademicSearchService
 import com.cw.vlainter.domain.user.dto.UpdateMyAcademicProfileRequest
-import com.cw.vlainter.domain.user.dto.UpdateGeminiApiKeyRequest
 import com.cw.vlainter.domain.user.dto.UpdateMyProfileRequest
 import com.cw.vlainter.domain.user.dto.UpdateMyServiceModeRequest
 import com.cw.vlainter.domain.user.dto.UpdateMemberByAdminRequest
@@ -131,18 +130,6 @@ class UserService(
             user.departmentName = null
         }
         val saved = userRepository.save(user)
-        return toProfileResponse(saved)
-    }
-
-    @Transactional
-    fun updateMyGeminiApiKey(principal: AuthPrincipal, request: UpdateGeminiApiKeyRequest): UserProfileResponse {
-        val saved = userGeminiApiKeyService.updateMyGeminiApiKey(principal, request.geminiApiKey)
-        return toProfileResponse(saved)
-    }
-
-    @Transactional
-    fun clearMyGeminiApiKey(principal: AuthPrincipal): UserProfileResponse {
-        val saved = userGeminiApiKeyService.clearMyGeminiApiKey(principal)
         return toProfileResponse(saved)
     }
 
