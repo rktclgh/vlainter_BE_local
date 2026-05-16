@@ -784,9 +784,6 @@ class StudentCourseService(
         if (material.sourceType != StudentCourseMaterialSourceType.UPLOAD) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "AI가 생성한 요약본은 다시 분석할 수 없습니다.")
         }
-        if (!userGeminiApiKeyService.hasGeminiApiKey(user)) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Gemini API 키를 먼저 등록해 주세요.")
-        }
         val activeMaterial = findActiveIngestionMaterial(course.id, material.id)
         if (activeMaterial != null) {
             throw ResponseStatusException(
