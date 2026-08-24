@@ -117,10 +117,17 @@ jobs:
     environment:
       name: local-ubuntu
       url: ${{ env.PUBLIC_BASE_URL }}
+    env:
+      # Older jobs can leave root-owned Gradle files in the runner's default
+      # checkout. Isolate each deployment checkout so actions/checkout never
+      # has to clean that shared workspace.
+      DEPLOY_SOURCE_DIR: deploy-src-${{ github.run_id }}
 
     steps:
       - name: Checkout BE (this repo)
         uses: actions/checkout@v4
+        with:
+          path: ${{ env.DEPLOY_SOURCE_DIR }}
 
       - name: Verify local runner environment
         run: |
@@ -133,7 +140,7 @@ jobs:
       - name: Sync deploy assets locally
         run: |
           mkdir -p "${DEPLOY_DIR}/deploy"
-          cp -a deploy/. "${DEPLOY_DIR}/deploy/"
+          cp -a "${DEPLOY_SOURCE_DIR}/deploy/." "${DEPLOY_DIR}/deploy/"
 
       - name: Deploy through local Docker
         env:
