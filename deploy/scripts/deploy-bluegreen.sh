@@ -46,11 +46,11 @@ if [ "$active_color" = "blue" ]; then
   previous_color="blue"
 elif [ "$active_color" = "green" ]; then
   target_color="blue"
-  target_port="18080"
+  target_port="18085"
   previous_color="green"
 else
   target_color="blue"
-  target_port="18080"
+  target_port="18085"
   previous_color=""
 fi
 
