@@ -54,6 +54,17 @@ else
   previous_color=""
 fi
 
+if ! command -v ss >/dev/null 2>&1; then
+  echo "[ERROR] 포트 충돌 사전 점검에 필요한 ss 명령을 찾을 수 없습니다."
+  exit 1
+fi
+
+if ss -H -ltn "sport = :${target_port}" | grep -q .; then
+  echo "[ERROR] 배포 대상 포트 ${target_port}가 이미 점유되어 있습니다. 프록시 전환을 중단합니다."
+  ss -ltn "sport = :${target_port}" || true
+  exit 1
+fi
+
 export IMAGE_TAG
 
 echo "[INFO] 현재 활성 색상: ${active_color}"
