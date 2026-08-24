@@ -11,7 +11,7 @@ https://vlainter.rktclgh.site
 구성:
 - `docker-compose.bluegreen.yml`
   - `proxy`: 외부 `8080` 포트를 받는 nginx
-  - `app-blue`: 내부 `127.0.0.1:18080`
+  - `app-blue`: 내부 `127.0.0.1:18085`
   - `app-green`: 내부 `127.0.0.1:18081`
 - `nginx/conf.d/default.conf`
   - `/etc/nginx/runtime/active-upstream.conf`를 include 해서 현재 활성 색상을 프록시한다.

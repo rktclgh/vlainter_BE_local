@@ -19,11 +19,11 @@ services:
     env_file:
       - ../.env
     environment:
-      SERVER_PORT: 18080
+      SERVER_PORT: 18085
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
-      - "127.0.0.1:18080:18080"
+      - "127.0.0.1:18085:18085"
     networks:
       - vlainter-net
 
